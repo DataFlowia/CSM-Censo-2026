@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@1.47.0/dist/umd/lucide.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -151,7 +151,7 @@
     <div class="max-w-4xl mx-auto space-y-6">
 
         <!-- Header Banner Container (2D) -->
-        <header class="card-2d p-6 sm:p-8">
+        <header class="card-2d p-4 sm:p-8">
             <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div class="flex items-center gap-4 text-center md:text-left">
                     <!-- Logo Escudo Colegio San Mateo -->
@@ -177,7 +177,7 @@
 
         <!-- Form Container (2D Card) -->
         <main>
-            <form id="censo-form" action="mailto:exalumnos@sanmateo.cl" method="post" enctype="text/plain" onsubmit="handleFormSubmit(event)" class="card-2d p-6 sm:p-10 space-y-8">
+            <form id="censo-form" onsubmit="handleFormSubmit(event)" class="card-2d p-4 sm:p-8 md:p-10 space-y-8">
                 
                 <!-- SECCIÓN 1: Identificación Personal y Contacto -->
                 <div class="space-y-5">
@@ -455,8 +455,14 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
+        // Initialize Lucide Icons (protegido: si falla, no debe romper el resto del formulario)
+        try {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        } catch (e) {
+            console.warn('No se pudieron cargar los iconos Lucide:', e);
+        }
 
         // Populate Graduation Years Dropdown (1959 to 2025)
         function populateYears() {
@@ -494,6 +500,79 @@
         function handleFormSubmit(event) {
             event.preventDefault();
 
+            const form = document.getElementById('censo-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return '';
+                return (el.value || '').toString().trim();
+            };
+
+            const getText = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return '';
+                if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
+                    return el.options[el.selectedIndex].text.trim();
+                }
+                return getVal(id);
+            };
+
+            const nombres = getVal('nombres');
+            const apellidos = getVal('apellidos');
+            const anioEgreso = getText('anio_egreso');
+            const rut = getVal('rut');
+            const telefono = getVal('telefono');
+            const email = getVal('email');
+            const pais = getText('pais');
+            const region = document.getElementById('region-container') && !document.getElementById('region-container').classList.contains('hidden') ? getText('region') : '';
+            const ciudadExtranjero = document.getElementById('ciudad-extranjero-container') && !document.getElementById('ciudad-extranjero-container').classList.contains('hidden') ? getVal('ciudad_extranjero') : '';
+            const comuna = getVal('comuna');
+            const areaProfesional = getText('area_profesional');
+            const cargoOcupacion = getVal('cargo_ocupacion');
+            const linkedin = getVal('linkedin');
+            const interesPrincipal = getText('interes_principal');
+            const mensaje = getVal('mensaje');
+
+            const lineas = [
+                'EL GRAN CENSO 2026 — Colegio San Mateo Osorno',
+                'Formulario oficial de actualización de datos de exalumnos',
+                '',
+                '1. IDENTIFICACIÓN PERSONAL Y CONTACTO',
+                `Nombres: ${nombres}`,
+                `Apellidos: ${apellidos}`,
+                `Año de egreso: ${anioEgreso}`,
+                `RUT: ${rut}`,
+                `Teléfono: ${telefono}`,
+                `Email: ${email}`,
+                '',
+                '2. UBICACIÓN',
+                `País de residencia: ${pais}`,
+                region ? `Región: ${region}` : '',
+                ciudadExtranjero ? `Ciudad (extranjero): ${ciudadExtranjero}` : '',
+                comuna ? `Comuna/Ciudad: ${comuna}` : '',
+                '',
+                '3. INFORMACIÓN PROFESIONAL',
+                `Área profesional: ${areaProfesional}`,
+                `Cargo/Ocupación: ${cargoOcupacion}`,
+                `LinkedIn: ${linkedin}`,
+                '',
+                '4. INTERÉS Y MENSAJE',
+                `Interés principal: ${interesPrincipal}`,
+                `Mensaje: ${mensaje}`
+            ].filter(line => line !== '');
+
+            const asunto = `El Gran Censo 2026 - ${nombres} ${apellidos}`.trim();
+            const cuerpo = lineas.join('\n');
+
+            const mailtoUrl = `mailto:exalumnos@sanmateo.cl?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+            // Abre el cliente de correo del usuario con los datos precargados
+            window.location.href = mailtoUrl;
+
             // Show Confirmation Modal
             document.getElementById('success-modal').classList.remove('hidden');
         }
@@ -509,6 +588,14 @@
         window.onload = function() {
             populateYears();
         };
+
+        // Refuerzo: asegura que el listado de años se rellene incluso si
+        // window.onload no llega a dispararse por algún error externo (ej. CDN caído)
+        try {
+            populateYears();
+        } catch (e) {
+            console.warn('populateYears() fallback error:', e);
+        }
     </script>
 </body>
 </html>
